@@ -1,0 +1,81 @@
+rule RuleMalicious
+{
+    meta:
+        description = "Detects SnakeKeyLogger .exe Variants"
+        author = "Camden Hackett"
+        date = "2024-11-20"
+        version = "3.7"
+        malware_family = "SnakeKeyLogger"
+        NOTE = "This currently only works for .exe variants"
+
+    strings:
+
+        // Portable Executable Files Have MZ at Byte 0
+        $PE_magic_byte = "MZ"
+
+        // Strings That Are Common For Snake .exe Files
+        $requestedExecutionLevel_asInvoker  = "        <requestedExecutionLevel level=\"asInvoker\" uiAccess=\"false\"/>" fullword ascii
+        $assemblyIdentity_version_and_name = "  <assemblyIdentity version=\"1.0.0.0\" name=\"MyApplication.app\"/>" fullword ascii
+        $trustInfo_xmlns_v2 = "  <trustInfo xmlns=\"urn:schemas-microsoft-com:asm.v2\">" fullword ascii
+        $requestedPrivileges_xmlns_v3  = "      <requestedPrivileges xmlns=\"urn:schemas-microsoft-com:asm.v3\">" fullword ascii
+        $trustInfo_closing_tag = "  </trustInfo>" fullword ascii
+        $requestedPrivileges_closing_tag = "      </requestedPrivileges>" fullword ascii
+        $icon = "fSystem.Drawing.Icon, System.Drawing," ascii wide nocase
+        $process = "PROCESSWAIT" fullword wide nocase
+        $autoIT = "/AutoIt3ExecuteLine" fullword wide nocase
+        $scriptName = "SCRIPTNAME" fullword wide nocase
+        $http = "HTTPSETUSERAGENT" fullword wide nocase
+        $fileWrite = "FILEWRITE" fullword wide nocase
+        $fileMove = "FILEMOVE" fullword wide nocase
+        $fileInstall = "FILEINSTALL" fullword wide nocase
+        $fileDelete = "FILEDELETE" fullword wide nocase
+        $quickLaunch = "\\Microsoft\\Internet Explorer\\Quick Launch" fullword wide
+
+        $outlookProfile = /Software\\Microsoft\\Windows NT\\CurrentVersion\\Windows Messaging Subsystem\\Profiles\\Outlook\\.{1,200}/
+        $cpuInfo = /HARDWARE\\\\DESCRIPTION\\\\System\\\\CentralProcessor\\\\0.{1,200}/
+
+        // Obvious Flags If a .exe File Contains This
+        $Key = "keylogger" fullword wide nocase
+        $Key1 = "KeyLoggerEventArgs" fullword wide nocase
+        $Key2 = "SnakeKeylogger" fullword wide nocase
+
+        // Samples Attempted To Communicate With / Gather Email Accounts 
+        $gmail_email_domain = "@gmail.com" fullword wide nocase
+        $smtp_gmail_server = "smtp.gmail.com" fullword wide nocase
+        $gmail_smtp_client_name = "GmailSMTPClient" fullword ascii nocase
+        
+        // URLs Commonly Seen
+        $malUrl = /http:\/\/filetransfer\.io(\/.*)?/ ascii wide nocase
+        $malUrl1 = /http:\/\/tempuri\.org(\/.*)?/ ascii wide nocase
+        $malUrl2 = /https:\/\/nexoproducciones\.cl(\/.*)?/ ascii wide nocase
+        $malUrl3 = /http:\/\/services\.sunlightlabs\.com\/api(\/.*)?/ ascii wide nocase
+        $malUrl4 = /https:\/\/www\.y2mate\.com(\/.*)?/ ascii wide nocase
+        $malUrl5 = /http:\/\/xred\.site50\.net(\/.*)?/ ascii wide nocase
+
+        // Domains Commonly Seen
+        $malDomain = /https?:\/\/checkip\.dyndns\.org(\/.*)?/ ascii wide nocase
+        $malDomain1 = /https?:\/\/reallyfreegeoip\.org(\/.*)?/ ascii wide nocase
+        $malDomain2 = /https?:\/\/scratchdreams\.tk(\/.*)?/ ascii wide nocase
+        $malDomain3 = /https?:\/\/mail\.speedhouseoman\.com(\/.*)?/ ascii wide nocase
+        $malDomain4 = /https?:\/\/mail\.maychuemail\.com(\/.*)?/ ascii wide nocase
+        $malDomain5 = /https?:\/\/xred\.mooo\.com(\/.*)?/ ascii wide nocase
+
+        // Common patterns of encoded or obfuscated strings
+        $doubleEncoded = /\\x[0-9a-fA-F]{2}/ ascii wide
+        $unicodeEscape = /\\\\u[0-9a-fA-F]{4}/ ascii wide
+
+        // Unusual or excessive escape sequences
+        $escapedBackslash = "\\\\\\\\" ascii wide
+        $escapedQuote = "\\\\\"" ascii wide
+
+        
+    condition:
+        // "MZ" at Byte 0
+        $PE_magic_byte at 0 and 
+        // {AND} Has to Match on at Least 7 Other Variables
+        7 of ($*) or
+        // {OR} Has to Have ONE of The Malicious Domainss / URLs
+        any of ($Key,$Key1,$Key2,$malUrl,$malUrl1,$malUrl2,$malUrl3,$malUrl4,$malUrl5,$malDomain,$malDomain1,$malDomain2,$malDomain3,$malDomain4,$malDomain5)
+
+
+}
